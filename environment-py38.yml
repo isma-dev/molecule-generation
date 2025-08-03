@@ -9,3 +9,5 @@ dependencies:
   - tensorflow==2.6.2
   - pip:
     - numpy==1.22.4
+    - mlflow==2.17.2
+    - azureml-mlflow==1.60.0

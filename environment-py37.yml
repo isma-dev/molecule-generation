@@ -8,4 +8,6 @@ dependencies:
   - rdkit==2020.09.1.0
   - tensorflow==2.1.0
   - pip:
-    - numpy==1.19.2
+      - numpy==1.19.2
+      - mlflow==1.30.1
+      - azureml-mlflow==1.55.0
