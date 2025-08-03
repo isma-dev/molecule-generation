@@ -7,6 +7,9 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Changed
+- Upgrade Azure ML SDK from V1 to V2 before [V1 deperecation](https://learn.microsoft.com/en-us/azure/machine-learning/how-to-migrate-from-v1) ([#73](https://github.com/microsoft/molecule-generation/pull/73))
+
 ## [0.4.1] - 2024-01-03
 
 ### Changed
