@@ -229,12 +229,12 @@ class MoLeRBaseModel(GraphTaskModel):
         quiet: bool = False,
         training: bool = True,
         max_num_steps: Optional[int] = None,  # Run until dataset ends if None
-        aml_run: Optional[Any] = None,
+        should_log_aml_run: Optional[bool] = None,
     ) -> Tuple[float, float, List[Any]]:
         with EpochMetricsLogger(
             window_size=self._logged_loss_smoothing_window_size,
             quiet=quiet,
-            aml_run=aml_run,
+            should_log_aml_run=should_log_aml_run,
             training=training,
         ) as metrics_logger:
             for step, (batch_features, batch_labels) in enumerate(data_iterator):

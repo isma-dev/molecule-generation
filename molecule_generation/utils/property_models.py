@@ -3,6 +3,7 @@ import enum
 from abc import abstractmethod
 from typing import Any, Dict, List, Tuple, Callable, Optional
 
+import mlflow
 import numpy as np
 import tensorflow as tf
 import sklearn.metrics as metrics
@@ -172,7 +173,7 @@ class MLPRegressionLayer(PropertyPredictionLayer):
 
     @staticmethod
     def log_evaluation_report(
-        prop_name: str, predictions, labels, aml_run=None, log_fun: Callable[[str], None] = print
+        prop_name: str, predictions, labels, should_log_aml_run=None, log_fun: Callable[[str], None] = print
     ) -> None:
         mae = metrics.mean_absolute_error(y_true=labels, y_pred=predictions)
         mse = metrics.mean_squared_error(y_true=labels, y_pred=predictions)
@@ -187,15 +188,12 @@ class MLPRegressionLayer(PropertyPredictionLayer):
         log_fun(f" Explained Variance:  {expl_var:.3f}")
         log_fun(f" R2 Score:            {r2_score:.3f}")
 
-        if aml_run:
-            aml_run.log_row(
-                f"{prop_name}_test_metrics",
-                mean_abs_err=float(mae),
-                mse=float(mse),
-                max_err=float(max_err),
-                explained_variance=float(expl_var),
-                r2_score=float(r2_score),
-            )
+        if should_log_aml_run:
+            mlflow.log_metric(f"{prop_name}_test_metrics", mean_abs_err=float(mae))
+            mlflow.log_metric(f"{prop_name}_test_metrics", mse=float(mse))
+            mlflow.log_metric(f"{prop_name}_test_metrics", max_err=float(max_err))
+            mlflow.log_metric(f"{prop_name}_test_metrics", explained_variance=float(expl_var))
+            mlflow.log_metric(f"{prop_name}_test_metrics", r2_score=float(r2_score))
 
 
 class MLPBinaryClassifierLayer(MLPRegressionLayer):
@@ -255,7 +253,7 @@ class MLPBinaryClassifierLayer(MLPRegressionLayer):
 
     @staticmethod
     def log_evaluation_report(
-        prop_name: str, predictions, labels, aml_run=None, log_fun: Callable[[str], None] = print
+        prop_name: str, predictions, labels, should_log_aml_run=None, log_fun: Callable[[str], None] = print
     ) -> None:
         rounded_predictions = np.round(predictions)
         acc = metrics.accuracy_score(y_true=labels, y_pred=rounded_predictions)
@@ -273,13 +271,10 @@ class MLPBinaryClassifierLayer(MLPRegressionLayer):
         log_fun(f" F1 Score:          {f1_score:.4f}")
         log_fun(f" ROC AUC:           {roc_auc:.4f}")
 
-        if aml_run:
-            aml_run.log_row(
-                f"{prop_name}_test_metrics",
-                accuracy=float(acc),
-                balanced_accuracy=float(balanced_acc),
-                precision=float(precision),
-                recall=float(recall),
-                fl_score=float(f1_score),
-                roc_auc_score=float(roc_auc),
-            )
+        if should_log_aml_run:
+            mlflow.log_metric(f"{prop_name}_test_metrics", accuracy=float(acc))
+            mlflow.log_metric(f"{prop_name}_test_metrics", balanced_accuracy=float(balanced_acc))
+            mlflow.log_metric(f"{prop_name}_test_metrics", precision=float(precision))
+            mlflow.log_metric(f"{prop_name}_test_metrics", recall=float(recall))
+            mlflow.log_metric(f"{prop_name}_test_metrics", fl_score=float(f1_score))
+            mlflow.log_metric(f"{prop_name}_test_metrics", roc_auc_score=float(roc_auc))

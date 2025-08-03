@@ -2,6 +2,7 @@ from typing import Optional, Dict, Tuple, List, Any
 from collections import defaultdict, deque
 import time
 
+from mlflow
 import tensorflow as tf
 import numpy as np
 
@@ -10,11 +11,11 @@ class EpochMetricsLogger:
     """Logs metrics for an epoch of training"""
 
     def __init__(
-        self, *, window_size: int = 100, quiet: bool, aml_run: Optional, training: bool
+        self, *, window_size: int = 100, quiet: bool, should_log_aml_run: Optional[bool], training: bool
     ) -> None:
         self._window_size = window_size
         self._quiet = quiet
-        self._aml_run = aml_run
+        self._should_log_aml_run = should_log_aml_run
         self._training = training
 
         # Initialise everything in case you don't want to use this as a contextmanager
@@ -53,9 +54,9 @@ class EpochMetricsLogger:
         )
         if self._step >= self._window_size and self._step % self._window_size == 0:
             self._moving_average_metrics = self._get_moving_average_metrics()
-            if self._aml_run is not None:
+            if self._should_log_aml_run is not None:
                 for k, v in self._moving_average_metrics.items():
-                    self._aml_run.log("smoothed_" + k, float(v))
+                    mlflow.log_metric("smoothed_" + k, float(v))
 
         # Tensorboard logging:
         batch_graph_average_loss = task_metrics["loss"] / float(

@@ -7,6 +7,7 @@ import os
 import time
 from typing import Dict, Any, Callable, Tuple, Union
 
+import mlflow
 import numpy as np
 import tensorflow as tf
 import tf2_gnn.cli_utils as cli
@@ -163,13 +164,6 @@ def run_from_args(args: argparse.Namespace) -> Tuple[str, str, str]:
     log(f"Dataset parameters: {json.dumps(training_utils.unwrap_tf_tracked_data(dataset._params))}")
     log(f"Model parameters: {json.dumps(training_utils.unwrap_tf_tracked_data(model._params))}")
 
-    if args.azureml_logging:
-        from azureml.core.run import Run
-
-        aml_run = Run.get_context()
-    else:
-        aml_run = None
-
     # Set up tensorboard logging.
     if args.tensorboard or args.profile:
         writer = tf.summary.create_file_writer(os.path.join(args.save_dir, "tensorboard"))
@@ -185,7 +179,7 @@ def run_from_args(args: argparse.Namespace) -> Tuple[str, str, str]:
         patience=args.patience,
         save_dir=args.save_dir,
         quiet=args.quiet,
-        aml_run=aml_run,
+        should_log_aml_run=args.azureml_logging,    # argument indicating the need of logging azureml runs
         profile=args.profile,
     )
 
@@ -208,12 +202,12 @@ def run_from_args(args: argparse.Namespace) -> Tuple[str, str, str]:
         try:
             with dataset.get_context_managed_tf_dataset(training_utils.DataFold.TEST) as test_data:
                 _, _, test_results = model.run_on_data_iterator(
-                    iter(test_data.tf_dataset), training=False, quiet=args.quiet, aml_run=aml_run
+                    iter(test_data.tf_dataset), training=False, quiet=args.quiet, should_log_aml_run=args.azureml_logging
                 )
                 test_metric, test_metric_string = model.compute_epoch_metrics(test_results)
                 log(test_metric_string)
-                if aml_run is not None:
-                    aml_run.log("task_test_metric", float(test_metric))
+                if args.azureml_logging is not None:
+                    mlflow.log_metric("task_test_metric", float(test_metric))
         finally:
             dataset._params["trace_element_keep_prob"] = orig_keep_prob
             dataset._params["trace_element_non_carbon_keep_prob"] = orig_non_carbon_keep_prob
@@ -230,7 +224,7 @@ def train(
     patience: int,
     save_dir: str,
     quiet: bool = False,
-    aml_run=None,
+    should_log_aml_run=None,
     profile: bool = False,
 ):
     save_file = os.path.join(save_dir, f"{run_id}_best.pkl")
@@ -254,7 +248,7 @@ def train(
                 training=False,
                 quiet=quiet,
                 max_num_steps=num_valid_steps,
-                aml_run=aml_run,
+                should_log_aml_run=should_log_aml_run,
             )
             best_valid_metric, best_val_str = model.compute_epoch_metrics(initial_valid_results)
             log_fun(f"Initial valid metric: {best_val_str}.")
@@ -276,7 +270,7 @@ def train(
                     training=True,
                     quiet=quiet,
                     max_num_steps=num_train_steps_between_valid,
-                    aml_run=aml_run,
+                    should_log_aml_run=should_log_aml_run,
                 )
 
                 if profile and epoch == 2:
@@ -294,7 +288,7 @@ def train(
                     training=False,
                     quiet=quiet,
                     max_num_steps=num_valid_steps,
-                    aml_run=aml_run,
+                    should_log_aml_run=should_log_aml_run,
                 )
                 tf.summary.scalar("valid_loss", data=valid_loss, step=epoch)
 
@@ -303,11 +297,11 @@ def train(
                     f" Valid:  {valid_loss:.4f} loss | {valid_metric_string} | {valid_speed:.2f} graphs/s",
                 )
 
-                if aml_run is not None:
-                    aml_run.log("task_train_metric", float(train_metric))
-                    aml_run.log("train_speed", float(train_speed))
-                    aml_run.log("task_valid_metric", float(valid_metric))
-                    aml_run.log("valid_speed", float(valid_speed))
+                if should_log_aml_run is not None:
+                    mlflow.log_metric("task_train_metric", float(train_metric))
+                    mlflow.log_metric("train_speed", float(train_speed))
+                    mlflow.log_metric("task_valid_metric", float(valid_metric))
+                    mlflow.log_metric("valid_speed", float(valid_speed))
 
                 # Save if good enough.
                 if valid_metric < best_valid_metric:
